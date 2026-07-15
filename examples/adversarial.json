@@ -1,0 +1,23 @@
+{
+  "corpus": [
+    {"content": "The checkout service runs on port 8080 with 6 workers."},
+    {"content": "The media service was moved to the new cluster on 2024-06-01."}
+  ],
+  "checks": [
+    {
+      "query": "what runs on port 8080, and where does the media service run?",
+      "forbidden": [
+        "media service (runs on|is on|listens on)[^.]{0,25}8080",
+        "media[^.]{0,30}port 8080"
+      ],
+      "expected": [
+        "checkout[^.]{0,30}8080"
+      ]
+    }
+  ],
+  "corrections": [
+    "Port 8080 belongs only to the checkout service. The media service has no port-8080 binding.",
+    "Correction: it is false that the media service runs on port 8080."
+  ],
+  "consolidate_wait": 3
+}

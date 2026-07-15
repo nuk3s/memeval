@@ -1,0 +1,119 @@
+{"query":"what port does the checkout service listen on?","answer":"8080"}
+{"query":"which port serves image traffic at Northwind?","answer":"8443"}
+{"query":"which service generates thumbnails rather than the gateway?","answer":"thumbnails.{0,80}media service|media service.{0,80}thumbnails"}
+{"query":"which port handles login and token issuance?","answer":"9001"}
+{"query":"what port answers search queries?","answer":"8983"}
+{"query":"outbound webhooks leave from which port?","answer":"8081"}
+{"query":"which port does the inventory service expose for gRPC?","answer":"8090"}
+{"query":"which service and port push customer notifications out?","answer":"8085"}
+{"query":"the payments service accepts connections on which port?","answer":"9443"}
+{"query":"what port does the labels service print shipping labels on?","answer":"8082"}
+{"query":"product recommendations are served over what protocol and port?","answer":"9090"}
+{"query":"which service does checkout consult before capturing a payment?","answer":"fraud screening|9002"}
+{"query":"which port handles CSV and PDF exports for Northwind?","answer":"8088"}
+{"query":"promotions and discounts belong to which service, on what port?","answer":"pricing|8092"}
+{"query":"which port does outbound mail relay through?","answer":"2525"}
+{"query":"which component terminates TLS before requests reach internal services?","answer":"terminates TLS"}
+{"query":"which database holds Northwind user accounts, and what version?","answer":"PostgreSQL 16"}
+{"query":"which PostgreSQL instance do orders live on?","answer":"PostgreSQL 15|instance.{0,40}db-orders|db-orders.{0,40}instance"}
+{"query":"the product catalog is stored where, exactly?","answer":"MongoDB"}
+{"query":"what do analytics queries run against?","answer":"ClickHouse.{0,30}24\\.3|24\\.3.{0,30}ClickHouse"}
+{"query":"what does the event bus run on, and how many Kafka brokers?","answer":"Kafka 3\\.7|three-broker"}
+{"query":"how many data nodes make up the search cluster?","answer":"three data nodes|3 data nodes|search-1"}
+{"query":"what does Northwind use for its session cache after the switch?","answer":"Memcached"}
+{"query":"which region is production hosted in?","answer":"eu-west-1|Dublin"}
+{"query":"where does disaster recovery live, and in what mode?","answer":"eu-central-1|Frankfurt|warm standby"}
+{"query":"what address space does the production network use?","answer":"10\\.20\\.0\\.0/16"}
+{"query":"which Kubernetes version runs production workloads?","answer":"1\\.29"}
+{"query":"what sits at the edge in front of the gateway?","answer":"HAProxy|keepalived"}
+{"query":"what provides internal name resolution for the northwind.internal zone?","answer":"CoreDNS.{0,60}northwind\\.internal|northwind\\.internal.{0,60}CoreDNS"}
+{"query":"how do engineers SSH into production machines?","answer":"jump-1|bastion"}
+{"query":"where do production hosts sync their time from?","answer":"ntp-1|ntp-2"}
+{"query":"what OS do production nodes run?","answer":"Ubuntu 22\\.04 LTS|production nodes.{0,30}Ubuntu 22\\.04"}
+{"query":"where must container images be pulled from?","answer":"registry\\.northwind\\.internal"}
+{"query":"how does staging differ from production on the database side?","answer":"single database replica"}
+{"query":"what do engineers use to reach the internal network remotely?","answer":"WireGuard"}
+{"query":"how long before the gateway gives up on an upstream call?","answer":"30 seconds"}
+{"query":"what is the anonymous rate limit per minute these days?","answer":"60 requests"}
+{"query":"how many requests per minute do authenticated clients get?","answer":"600"}
+{"query":"access tokens expire after how long?","answer":"access tokens?.{0,60}15[- ]minutes?|15[- ]minutes?.{0,60}access tokens?"}
+{"query":"how long do refresh tokens stay usable?","answer":"60 days"}
+{"query":"how big can product image uploads get before rejection?","answer":"25 MB"}
+{"query":"how long can web sessions sit idle before they expire?","answer":"45 minutes"}
+{"query":"how many Postgres connections does each checkout instance hold?","answer":"pool of 20|20 Postgres"}
+{"query":"search queries get killed after how long?","answer":"800 ms"}
+{"query":"how many times are failed webhook deliveries retried?","answer":"five times|5 times|exponential backoff"}
+{"query":"what is the biggest page size a list endpoint will return?","answer":"200 items"}
+{"query":"how many characters must passwords have at minimum?","answer":"12 characters"}
+{"query":"after how many consecutive failures does the payments circuit open?","answer":"five consecutive|5 consecutive"}
+{"query":"how often are internal service certificates rotated, and by whom?","answer":"in-house CA|rotated every 90"}
+{"query":"who gets paged first when the search cluster falls over?","answer":"Priya Nair"}
+{"query":"whose team is responsible for the payments service?","answer":"Marcus Webb"}
+{"query":"which team does checkout belong to, and who leads it?","answer":"Storefront team|Elena Petrova"}
+{"query":"who runs the Kubernetes cluster day to day?","answer":"Tomasz Kowalski|platform team"}
+{"query":"who is responsible for db-main and db-orders administration?","answer":"Ines Fuentes"}
+{"query":"who has to review new external integrations before they ship?","answer":"Aiko Tanaka"}
+{"query":"who owns the media pipeline?","answer":"Dmitri Volkov"}
+{"query":"when does the on-call rotation hand off?","answer":"Monday"}
+{"query":"how long before the secondary gets paged on an unacknowledged page?","answer":"within 15 minutes|secondary is paged"}
+{"query":"which group owns ClickHouse operations?","answer":"Sam Okafor|data engineering"}
+{"query":"who keeps the incident-commander rotation organized?","answer":"Rafael Ortiz"}
+{"query":"which incident in May 2024 degraded search, and what caused it?","answer":"facet query|OOM"}
+{"query":"why did Kafka partition leaders flap in January 2024?","answer":"NIC firmware|broker-2"}
+{"query":"which incident is the reason the payments circuit breaker exists?","answer":"INC-2311|cascaded"}
+{"query":"what changed after the July 2024 webhook retry storm?","answer":"retry cap"}
+{"query":"why were invoices dated 29 February skipped by billing?","answer":"leap-day|parsing bug"}
+{"query":"the bad CoreDNS push in April 2024 broke discovery for how long?","answer":"25 minutes"}
+{"query":"why did thumbnails lag six hours in June 2024?","answer":"misconfigured media queue|queue consumer"}
+{"query":"what forced db-main to fail over in December 2023?","answer":"disk|INC-2312"}
+{"query":"what throttled logged-in users in August 2024?","answer":"rate-limiter misconfiguration|anonymous limit"}
+{"query":"what dropped inventory gRPC calls in September 2024?","answer":"expired.*certificate|renewal automation"}
+{"query":"which search engine does Northwind run today?","answer":"OpenSearch"}
+{"query":"where does media and artifact storage live now?","answer":"MinIO"}
+{"query":"after Jenkins was retired, what runs the pipelines?","answer":"GitLab"}
+{"query":"what does monitoring run on since the Nagios retirement?","answer":"Prometheus|Grafana"}
+{"query":"when was the orders database upgraded off PostgreSQL 13?","answer":"13 to (PostgreSQL )?15"}
+{"query":"when was checkout extracted from the old PHP monolith?","answer":"2022"}
+{"query":"when did services land on Kubernetes instead of VMs?","answer":"Kubernetes.{0,80}November 2023|November 2023.{0,80}Kubernetes"}
+{"query":"how are invoices generated since billing went event-driven?","answer":"Kafka events|October 2024"}
+{"query":"when did Envoy take over from Nginx at the gateway?","answer":"April 2023"}
+{"query":"what is the minimum TLS version at the edge now?","answer":"TLS 1\\.2"}
+{"query":"when is the nightly full backup of db-main taken?","answer":"01:00"}
+{"query":"how often are WAL segments shipped to object storage?","answer":"every five minutes|every 5 minutes"}
+{"query":"how long do database backups stick around?","answer":"30 days"}
+{"query":"how often is a backup restored into staging as a drill?","answer":"once a quarter"}
+{"query":"how long are application logs kept before they age out?","answer":"logs.{0,40}90 days|90 days.{0,40}logs"}
+{"query":"how long must audit logs be retained for compliance reasons?","answer":"400 days"}
+{"query":"deleted accounts get their PII purged within how many days?","answer":"14 days"}
+{"query":"what does the disaster recovery plan promise for RPO and RTO?","answer":"10 minutes|four hours"}
+{"query":"which month does the external penetration test land in?","answer":"penetration test.{0,40}October|October.{0,40}penetration test"}
+{"query":"what Python version do backend services target?","answer":"3\\.12"}
+{"query":"which services are written in Go, and on which version?","answer":"Go 1\\.22|inventory and recommendations"}
+{"query":"what Node version does the storefront frontend build on?","answer":"Node 20"}
+{"query":"which Terraform release is pinned across all environments?","answer":"pinned at 1\\.7|Terraform"}
+{"query":"what base image do containers build from?","answer":"pinned by digest|22\\.04 base image"}
+{"query":"on which days do release trains leave?","answer":"Tuesday and Thursday"}
+{"query":"what library do Python services use to talk to Postgres?","answer":"psycopg"}
+{"query":"which version is the public API at, and how long does v1 have left?","answer":"December 2026"}
+{"query":"what percentage of traffic has the new-checkout-flow flag turned on?","answer":"25%"}
+{"query":"when did guest-checkout reach 100% of users?","answer":"guest-checkout.{0,60}100%|100%.{0,60}guest-checkout"}
+{"query":"which accounts have the ai-recommendations flag enabled?","answer":"staff"}
+{"query":"what is happening with the legacy-wishlist flag and its code?","answer":"switched off"}
+{"query":"which customers get express-shipping enabled?","answer":"EU customers|only for EU"}
+{"query":"what mode does fraud-model-v2 run in, and are scores enforced?","answer":"shadow mode"}
+{"query":"how long do clients cache feature flag state?","answer":"(cache|flag).{0,60}60 seconds|60 seconds.{0,60}(cache|flag)"}
+{"query":"does anyone still get gated on dark-mode?","answer":"no longer gated|everyone"}
+{"query":"checkout makes synchronous calls to which services?","answer":"payments and inventory"}
+{"query":"what monthly availability does checkout promise?","answer":"99\\.95"}
+{"query":"what p99 latency does search commit to?","answer":"300 ms"}
+{"query":"what availability SLO does the API gateway carry?","answer":"99\\.9%"}
+{"query":"what happens to deploys when the error budget is burned?","answer":"freeze|frozen"}
+{"query":"which outside provider handles card processing for Northwind?","answer":"Paylode"}
+{"query":"how many requests per second does the shipping labels provider allow?","answer":"Parcelio|5 requests per second"}
+{"query":"what is the daily quota for transactional email sends?","answer":"Mailhawk|100,000"}
+{"query":"what fraction of webhook deliveries must land within 60 seconds?","answer":"99%"}
+{"query":"how many concurrent export jobs does one tenant get?","answer":"three concurrent"}
+{"query":"when does the nightly batch job kick off, and how long does it run?","answer":"02:00"}
+{"query":"how often is the full search index rebuilt?","answer":"Sunday"}
+{"query":"billing reconciles invoices at what time each day?","answer":"13:00"}
+{"query":"how does merged code get applied to production?","answer":"Git-driven|release pipeline"}

@@ -1,0 +1,37 @@
+[project]
+name = "memeval"
+version = "0.2.0"
+description = "Evaluate an agent memory layer: rank scoring, adversarial consolidation checks, recorded runs with replay and charts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = []
+keywords = ["agent-memory", "evaluation", "rag", "hindsight", "mem0", "vector-search"]
+
+[project.optional-dependencies]
+tui = ["textual>=0.80"]
+charts = ["matplotlib>=3.8"]
+all = ["textual>=0.80", "matplotlib>=3.8"]
+
+[project.urls]
+Repository = "https://github.com/nuk3s/memeval"
+
+[project.scripts]
+memeval = "memeval.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["memeval*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
