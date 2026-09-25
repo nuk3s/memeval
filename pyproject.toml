@@ -9,9 +9,10 @@ dependencies = []
 keywords = ["agent-memory", "evaluation", "rag", "hindsight", "mem0", "vector-search"]
 
 [project.optional-dependencies]
-tui = ["textual>=0.80"]
+tui = ["textual>=2.0"]
 charts = ["matplotlib>=3.8"]
-all = ["textual>=0.80", "matplotlib>=3.8"]
+all = ["textual>=2.0", "matplotlib>=3.8"]
+dev = ["pytest", "pytest-asyncio", "ruff>=0.8,<1"]
 
 [project.urls]
 Repository = "https://github.com/nuk3s/memeval"
