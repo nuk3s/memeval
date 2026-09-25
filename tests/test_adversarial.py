@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+
+import pytest
 from conftest import FakeAdapter
 
 from memeval.adversarial import run_adversarial
@@ -54,13 +58,22 @@ def test_clean_store_stays_clean(tmp_path):
 
 
 def test_negation_correction_not_flagged_as_fabrication(tmp_path):
-    # the correction itself contains "media ... 8080" but with a negation cue
-    a = FakeAdapter()
-    r, _ = run(tmp_path, a)
-    a.retain([{"content": "the media service is not on port 8080"}])
-    # direct check: a store returning only the negated correction must stay clean
-    from memeval.adversarial import _NEG
-    assert _NEG.search("the media service is not on port 8080")
+    # a store that recalls only the negated correction restates "media ... 8080" in
+    # order to deny it: the forbidden regex matches that text, and the check must
+    # skip it or every correction would read as a fabrication
+    class RecallsCorrection(FakeAdapter):
+        def recall(self, query, k=10):
+            return [{"text": "the media service is not on port 8080", "score": 1.0}]
+    r, _ = run(tmp_path, RecallsCorrection(), consolidate=False)
+    assert r["before"][0]["fabricated"] == []
+    assert r["after_corrections"][0]["fabricated"] == []
+
+    # ...while the same binding stated affirmatively is still caught
+    class Affirms(FakeAdapter):
+        def recall(self, query, k=10):
+            return [{"text": "the media service is on port 8080", "score": 1.0}]
+    r, _ = run(tmp_path, Affirms(), consolidate=False)
+    assert r["before"][0]["fabricated"] == ["media service[^.]{0,30}8080"]
 
 
 def test_no_corrections_probe(tmp_path):
@@ -104,3 +117,32 @@ def test_consolidate_exception_does_not_kill_run(tmp_path):
     assert r is not None and not r["before"][0]["fabricated"]
     cons = [e for e in evs if e["ev"] == "consolidate"]
     assert cons and cons[0]["ok"] is False
+
+
+EXAMPLE_PROBE = Path(__file__).resolve().parent.parent / "examples" / "adversarial.json"
+
+
+@pytest.mark.parametrize("bad, msg", [
+    ({"checks": [{"query": "q"}]}, "corpus"),
+    ({"corpus": [{"content": "x"}], "checks": []}, "checks"),
+    ({"corpus": [{"content": "x"}], "checks": [{"forbidden": []}]}, "check 1: missing"),
+    ({"corpus": [{"content": "x"}], "checks": [{"query": "q", "forbidden": ["("]}]},
+     "bad forbidden regex"),
+    ({"corpus": [{"content": "x"}], "checks": [{"query": "q"}], "consolidate_wait": "soon"},
+     "consolidate_wait"),
+    ({"corpus": [{"content": "x"}], "checks": [{"query": "q"}], "corrections": "nope"},
+     "corrections"),
+    ([], "JSON object"),
+])
+def test_load_probe_rejects_malformed_shapes(tmp_path, bad, msg):
+    from memeval.adversarial import load_probe
+    p = tmp_path / "probe.json"
+    p.write_text(json.dumps(bad))
+    with pytest.raises(ValueError, match=msg):
+        load_probe(p)
+
+
+def test_bundled_probe_passes_validation():
+    from memeval.adversarial import load_probe
+    probe = load_probe(EXAMPLE_PROBE)
+    assert probe["checks"] and probe["corrections"]

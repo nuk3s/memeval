@@ -19,7 +19,8 @@ line, in the order things happened. Same-second collisions get a `-2`, `-3`… s
 Notes.
 
 The `ready` event is the readiness poll that replaced a fixed sleep: after retain, memeval
-polls recall on a sample of corpus docs (word-overlap match, ≥50% of the doc's content
+polls recall on up to 10 docs spread evenly across the corpus, first and last always
+included so a dropped tail batch is caught (word-overlap match, ≥50% of the doc's content
 words, because extracting stores rewrite text) until each appears or `--ready-timeout`
 runs out. A doc in `missing` was accepted by the store but never became recallable —
 silent write loss. The run continues; the event keeps the evidence.
@@ -27,6 +28,10 @@ silent write loss. The run continues; the event keeps the evidence.
 Hit text is truncated in the log for size; fabrication verdicts are computed on the full
 recalled text before truncation, so a `verdict` can reference a match you can't fully see
 in the neighbouring `query` event.
+
+`--retries N` re-issues a recall only on transport errors and HTTP 5xx/408/425/429. Any
+other 4xx (bad token, unknown route) fails identically every time, so it becomes an error row
+on the first attempt.
 
 Latency percentiles count only error-free queries; `errors` counts the rest. Error
 messages are never empty strings — a bare exception records its class name.

@@ -151,14 +151,72 @@ def test_hindsight_retain_batches(http, monkeypatch):
     assert len(posts[0][2]["items"]) == 20 and len(posts[2][2]["items"]) == 5
 
 
-def test_http_error_body_surfaces_in_message(monkeypatch):
+@pytest.mark.parametrize("name", ["hindsight", "mem0", "letta", "zep", "example-rest"])
+def test_http_error_body_surfaces_for_every_adapter(monkeypatch, name):
+    # one shared helper: a 4xx from any store says why, not just the status line
     import urllib.error
-    monkeypatch.setenv("MEM0_URL", "http://mem0:8888")
-    from memeval.adapters.mem0 import Mem0Adapter
+
+    from memeval.adapters import REGISTRY
+    monkeypatch.setenv("LETTA_AGENT_ID", "agent-1")
 
     def bad_request(req, timeout=None, context=None):
         raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {},
                                      io.BytesIO(b'{"detail": "user_id required"}'))
     monkeypatch.setattr(urllib.request, "urlopen", bad_request)
     with pytest.raises(urllib.error.HTTPError, match="user_id required"):
-        Mem0Adapter().recall("q", 5)
+        REGISTRY[name]().recall("q", 5)
+
+
+def test_example_rest_retain_and_recall(http, monkeypatch):
+    monkeypatch.setenv("MEMEVAL_REST_URL", "http://rest:8000/")
+    monkeypatch.setenv("MEMEVAL_REST_TOKEN", "tok")
+    monkeypatch.setenv("MEMEVAL_REST_USER", "u9")
+    from memeval.adapters.example_rest import ExampleRestAdapter
+    fake = http([{}])
+    a = ExampleRestAdapter()
+    a.retain([{"content": "fact one"}])
+    method, url, body, headers = fake.requests[0]
+    assert method == "POST" and url == "http://rest:8000/memories"
+    assert body == {"text": "fact one", "user_id": "u9"}
+    assert headers.get("Authorization") == "Bearer tok"
+    assert headers.get("Content-type") == "application/json"
+
+    fake = http([{"results": [{"memory": "fact one", "score": 0.5}, {"text": "alt"}]}])
+    hits = a.recall("fact", 1)
+    assert fake.requests[0][2] == {"query": "fact", "user_id": "u9"}
+    assert hits == [{"text": "fact one", "score": 0.5}]  # k applied client-side
+
+
+def test_request_json_defaults_to_get_without_body(http):
+    from memeval.adapters._http import request_json
+    fake = http([{"ok": True}])
+    assert request_json("http://x/ping") == {"ok": True}
+    assert fake.requests[0][0] == "GET" and fake.requests[0][2] is None
+    fake = http([{}])
+    request_json("http://x/put", body={"a": 1}, method="PUT")
+    assert fake.requests[0][0] == "PUT" and fake.requests[0][2] == {"a": 1}
+
+
+def test_hindsight_batch_floor(monkeypatch):
+    monkeypatch.setenv("HINDSIGHT_BATCH", "0")
+    from memeval.adapters.hindsight import HindsightAdapter
+    assert HindsightAdapter().batch == 1  # used to raise: range() arg 3 must not be zero
+
+
+def test_hindsight_consolidate_failure_reaches_the_run_log(monkeypatch, tmp_path):
+    import urllib.error
+
+    from memeval.adapters.hindsight import HindsightAdapter
+    from memeval.events import RunLog, read_events
+    from memeval.runner import Runner
+
+    def refuse(req, timeout=None, context=None):
+        raise urllib.error.URLError("connection refused")
+    monkeypatch.setattr(urllib.request, "urlopen", refuse)
+    with pytest.raises(urllib.error.URLError):
+        HindsightAdapter().consolidate()  # adapter no longer swallows it...
+    log = RunLog(tmp_path / "run.jsonl")
+    assert Runner(HindsightAdapter(), log).consolidate() is False  # ...the Runner guards it
+    log.close()
+    ev = [e for e in read_events(log.path) if e["ev"] == "consolidate"][0]
+    assert ev["ok"] is False and "refused" in ev["error"]  # and the log tells the truth

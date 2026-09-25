@@ -1,8 +1,6 @@
-import json
 import os
-import urllib.error
-import urllib.request
 
+from ._http import request_json
 from .base import MemoryAdapter
 
 
@@ -30,24 +28,9 @@ class Mem0Adapter(MemoryAdapter):
         self.infer = os.environ.get("MEM0_INFER", "1") not in ("0", "false", "no")
 
     def _call(self, path, body, timeout=120):
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["X-API-Key"] = self.api_key
-        req = urllib.request.Request(self.url + path, data=json.dumps(body).encode(),
-                                     method="POST", headers=headers)
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                raw = r.read().decode()
-                return json.loads(raw) if raw else {}
-        except urllib.error.HTTPError as e:
-            detail = ""
-            try:
-                detail = e.read().decode()[:200]
-            except Exception:
-                pass
-            raise urllib.error.HTTPError(
-                e.url, e.code, f"{e.reason} — {detail}" if detail else e.reason,
-                e.headers, None) from None
+        headers = {"X-API-Key": self.api_key} if self.api_key else {}
+        return request_json(self.url + path, body=body, method="POST",
+                            headers=headers, timeout=timeout)
 
     def retain(self, items):
         for i in items:

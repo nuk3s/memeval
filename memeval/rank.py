@@ -4,8 +4,40 @@ import statistics
 
 
 def load_jsonl(path):
+    rows = []
     with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+        for n, line in enumerate(f, 1):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as e:
+                raise ValueError(f"line {n}: {e}") from None
+    return rows
+
+
+def _validate_rows(rows, label, fields):
+    """Every row is an object whose `fields` are non-empty strings. Fails loud at
+    load time with a row number, instead of a KeyError mid-run after retain."""
+    for n, row in enumerate(rows, 1):
+        if not isinstance(row, dict):
+            raise ValueError(
+                f"{label} row {n}: expected a JSON object, got {type(row).__name__}")
+        for field in fields:
+            v = row.get(field)
+            if not isinstance(v, str) or not v.strip():
+                raise ValueError(f"{label} row {n}: missing or empty {field!r}")
+    return rows
+
+
+def load_corpus(path):
+    return _validate_rows(load_jsonl(path), "corpus", ("content",))
+
+
+def load_gold(path):
+    """`answer` is checked for presence only: a malformed regex is an error row at
+    query time (Runner.query), not a rejected file — see the README."""
+    return _validate_rows(load_jsonl(path), "gold", ("query", "answer"))
 
 
 # nearest-rank with round(); differs from numpy's linear interpolation —

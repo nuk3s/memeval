@@ -74,3 +74,10 @@ def test_runlog_context_manager(tmp_path):
     with RunLog(p) as log:
         log.emit("run_meta", run_id="r1")
     assert read_events(p) == [{"ev": "run_meta", "run_id": "r1"}]
+
+
+def test_read_events_skips_non_object_lines(tmp_path):
+    # a foreign .jsonl in runs/ can hold arrays or scalars; every consumer does .get()
+    p = tmp_path / "run.jsonl"
+    p.write_text('[1, 2]\n"text"\n42\nnull\n{"ev": "run_meta", "run_id": "r1"}\n')
+    assert read_events(p) == [{"ev": "run_meta", "run_id": "r1"}]
