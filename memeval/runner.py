@@ -2,16 +2,30 @@
 readiness polling, event emission. Hardening lives here, written once."""
 import re
 import time
+import urllib.error
 
 HIT_TEXT_LIMIT = 300
+READY_SAMPLE = 10
 # ConnectionError and TimeoutError are OSError subclasses — listed anyway for
 # readability. urllib.error.URLError is also an OSError subclass, so plain-http
 # adapter failures land here too.
 RETRYABLE = (ConnectionError, TimeoutError, OSError)
+# HTTP statuses that can plausibly clear on a second attempt. Any other 4xx (401,
+# 404, 422...) is a configuration or request problem that fails identically every
+# time; retrying it only delays the error row and inflates its recorded latency.
+RETRYABLE_HTTP = frozenset({408, 425, 429})
 
 
 def _ms(t0):
     return round((time.monotonic() - t0) * 1000)
+
+
+def _retryable(e):
+    # HTTPError is an OSError subclass, so without this check a bad token would be
+    # retried --retries times per query.
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code >= 500 or e.code in RETRYABLE_HTTP
+    return isinstance(e, RETRYABLE)
 
 
 def _coerce_score(v):
@@ -38,6 +52,18 @@ def _overlaps(source, text, threshold=0.5):
     tl = text.lower()
     found = sum(1 for w in words if w in tl)
     return found / len(words) >= threshold
+
+
+def _spread(corpus, sample):
+    """Up to `sample` (index, doc) pairs spaced evenly across the corpus, first and
+    last always included. Stores retain in batches, and a batch dropped at the tail
+    of a big corpus is invisible to a head-only sample — which is exactly the silent
+    write loss the readiness poll exists to catch."""
+    n = len(corpus)
+    if n <= sample:
+        return list(enumerate(corpus))
+    picks = sorted({round(i * (n - 1) / max(sample - 1, 1)) for i in range(sample)})
+    return [(i, corpus[i]) for i in picks]
 
 
 class Runner:
@@ -76,12 +102,12 @@ class Runner:
         self.log.emit("consolidate", ms=_ms(t0), ok=True, error=None)
         return True
 
-    def wait_ready(self, corpus, sample=10):
+    def wait_ready(self, corpus, sample=READY_SAMPLE):
         """Poll until each sampled doc is recallable; report the ones that never are.
         A doc missing at timeout is the 'success:true but not persisted' failure —
         recorded, warned about, and the run continues."""
-        docs = corpus[:sample]
-        pending = dict(enumerate(docs))
+        pending = dict(_spread(corpus, sample))  # corpus index -> doc
+        n_sampled = len(pending)
         t0 = time.monotonic()
         while True:
             for idx in list(pending):
@@ -100,7 +126,7 @@ class Runner:
             time.sleep(min(self.poll_interval, remaining))
         missing = [pending[i].get("id") or f"#{i}" for i in sorted(pending)]
         self.log.emit("ready", polled_s=round(time.monotonic() - t0, 1),
-                      verified_n=len(docs) - len(missing), sampled_n=len(docs),
+                      verified_n=n_sampled - len(missing), sampled_n=n_sampled,
                       missing=missing)
         if missing:
             self.echo(f"WARNING: {len(missing)} doc(s) never became recallable "
@@ -118,11 +144,10 @@ class Runner:
                 hits = _normalize_hits(self.adapter.recall(query, k))
                 ms, err = _ms(t0), None
                 break
-            except RETRYABLE as e:
-                ms, err = _ms(t0), str(e) or e.__class__.__name__
             except Exception as e:
                 ms, err = _ms(t0), str(e) or e.__class__.__name__
-                break
+                if not _retryable(e):
+                    break
         rank = None
         if err is None and pattern:
             try:
