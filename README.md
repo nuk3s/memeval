@@ -28,7 +28,7 @@ That's 119 paraphrased queries, and the two rank-1 misses are the dataset doing 
 
 **Adversarial.** Retain a small set of facts chosen to invite a bad merge, trigger the store's consolidation, and check whether recall now returns a statement no source made. Then feed corrections and check whether the fabrication goes away. A store that invents a fact and won't retract it is worse than one that misses. A check that errors is reported as an error, never as "clean".
 
-**Silent write loss.** After retain, memeval polls until the stored docs are actually recallable, instead of trusting the write acknowledgment. This caught a real case during this repo's own release verification — the store returned success and the fact never became findable:
+**Silent write loss.** After retain, memeval polls a sample of docs spread across the whole corpus until each is actually recallable, instead of trusting the write acknowledgment. This caught a real case during this repo's own release verification — the store returned success and the fact never became findable:
 
 ```
 WARNING: 1 doc(s) never became recallable (silent write loss?): nw-06
@@ -41,9 +41,9 @@ Rank scores can come out perfect while a store quietly drops writes. This check 
     git clone https://github.com/nuk3s/memeval
     cd memeval
     pip install -e .            # core: stdlib only
-    pip install -e .[tui]       # + replay TUI (Textual)
-    pip install -e .[charts]    # + SVG/PNG charts (matplotlib)
-    pip install -e .[all]
+    pip install -e ".[tui]"     # + replay TUI (Textual)
+    pip install -e ".[charts]"  # + SVG/PNG charts (matplotlib)
+    pip install -e ".[all]"
 
 Python 3.10 or newer.
 
@@ -95,7 +95,9 @@ numbers from it, and send a fix if the docs lied.
 Writing an adapter is ~40 lines: subclass `MemoryAdapter` from
 `memeval/adapters/base.py`, implement `retain(items)` and `recall(query, k)`, optionally
 `consolidate()`, `supersede()`, `prepare()`, and `config()`, then register it in
-`memeval/adapters/__init__.py`. Copy `example_rest.py` and start from there.
+`memeval/adapters/__init__.py`. Copy `example_rest.py` and start from there; the bundled adapters share
+`memeval/adapters/_http.py` for JSON requests, which folds the server's error body into
+the exception message so a 4xx in the run log says why.
 `memeval doctor` is the conformance check: it writes three sentinel docs, polls the recall
 roundtrip, and probes the optional capabilities. Partial visibility is an exit-1 PARTIAL,
 not a pass.

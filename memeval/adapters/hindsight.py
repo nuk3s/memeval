@@ -1,9 +1,8 @@
-import json
 import os
 import ssl
-import urllib.request
 from typing import Dict, List, Optional
 
+from ._http import request_json
 from .base import MemoryAdapter
 
 
@@ -15,7 +14,7 @@ class HindsightAdapter(MemoryAdapter):
       HINDSIGHT_TOKEN    bearer token       (default empty)
       HINDSIGHT_BANK     bank name          (default memeval-scratch)
       HINDSIGHT_INSECURE any non-empty value skips TLS verification (for internal CAs)
-      HINDSIGHT_BATCH    items per retain POST (default 20)
+      HINDSIGHT_BATCH    items per retain POST (default 20, minimum 1)
       HINDSIGHT_TIMEOUT  seconds per retain POST (default 600)
 
     Point HINDSIGHT_BANK at a throwaway bank. The eval writes into it.
@@ -31,7 +30,8 @@ class HindsightAdapter(MemoryAdapter):
         self.bank = bank or os.environ.get("HINDSIGHT_BANK", "memeval-scratch")
         if insecure is None:
             insecure = bool(os.environ.get("HINDSIGHT_INSECURE", ""))
-        self.batch = int(os.environ.get("HINDSIGHT_BATCH", "20"))
+        # a batch of 0 would make range() raise on the first retain
+        self.batch = max(1, int(os.environ.get("HINDSIGHT_BATCH", "20")))
         self.timeout = int(os.environ.get("HINDSIGHT_TIMEOUT", "600"))
         self.ctx = ssl.create_default_context()
         if insecure:
@@ -39,13 +39,9 @@ class HindsightAdapter(MemoryAdapter):
             self.ctx.verify_mode = ssl.CERT_NONE
 
     def _call(self, method: str, path: str, body=None, timeout: int = 300):
-        data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(
-            self.url + path, data=data, method=method,
-            headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=timeout, context=self.ctx) as r:
-            raw = r.read().decode()
-            return json.loads(raw) if raw else {}
+        return request_json(self.url + path, body=body, method=method, timeout=timeout,
+                            headers={"Authorization": f"Bearer {self.token}"},
+                            context=self.ctx)
 
     def _bank(self, suffix: str) -> str:
         return f"/v1/default/banks/{self.bank}{suffix}"
@@ -82,10 +78,10 @@ class HindsightAdapter(MemoryAdapter):
         return out
 
     def consolidate(self) -> None:
-        try:
-            self._call("POST", self._bank("/consolidate"), {})
-        except Exception:
-            pass  # bank may have observations off; nothing to consolidate
+        # Deliberately unguarded. Runner.consolidate records a failure in the run log
+        # and continues, and doctor reports it; swallowing it here would log ok=True
+        # for a consolidation that never ran (observations off, server down, 4xx).
+        self._call("POST", self._bank("/consolidate"), {})
 
     def supersede(self, doc_id: str, content: str, tags: Optional[list] = None) -> None:
         self.retain([{"content": content, "id": doc_id, "tags": tags or []}])

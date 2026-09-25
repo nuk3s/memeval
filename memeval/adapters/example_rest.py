@@ -1,8 +1,7 @@
-import json
 import os
-import urllib.request
 from typing import Dict, List
 
+from ._http import request_json
 from .base import MemoryAdapter
 
 
@@ -27,12 +26,8 @@ class ExampleRestAdapter(MemoryAdapter):
         self.user = user or os.environ.get("MEMEVAL_REST_USER", "memeval")
 
     def _post(self, path: str, body: Dict, timeout: int = 120):
-        req = urllib.request.Request(
-            self.url + path, data=json.dumps(body).encode(), method="POST",
-            headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            raw = r.read().decode()
-            return json.loads(raw) if raw else {}
+        return request_json(self.url + path, body=body, method="POST", timeout=timeout,
+                            headers={"Authorization": f"Bearer {self.token}"})
 
     def retain(self, items: List[Dict]) -> None:
         for i in items:

@@ -1,9 +1,7 @@
-import json
 import os
-import urllib.error
 import urllib.parse
-import urllib.request
 
+from ._http import request_json
 from .base import MemoryAdapter
 
 
@@ -36,26 +34,8 @@ class LettaAdapter(MemoryAdapter):
         return f"{self.url}/v1/agents/{agent}/archival-memory{suffix}"
 
     def _call(self, url, body=None, timeout=120):
-        headers = {"Content-Type": "application/json"}
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(url, data=data,
-                                     method="POST" if body is not None else "GET",
-                                     headers=headers)
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                raw = r.read().decode()
-                return json.loads(raw) if raw else {}
-        except urllib.error.HTTPError as e:
-            detail = ""
-            try:
-                detail = e.read().decode()[:200]
-            except Exception:
-                pass
-            raise urllib.error.HTTPError(
-                e.url, e.code, f"{e.reason} — {detail}" if detail else e.reason,
-                e.headers, None) from None
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        return request_json(url, body=body, headers=headers, timeout=timeout)
 
     def retain(self, items):
         for i in items:
