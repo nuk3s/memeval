@@ -87,7 +87,9 @@ def read_events(path):
             if not line.strip():
                 continue
             try:
-                events.append(json.loads(line))
+                rec = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if isinstance(rec, dict):  # an event is always an object; a foreign file's
+                events.append(rec)     # arrays/scalars would crash every consumer's .get
     return events
