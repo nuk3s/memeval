@@ -14,7 +14,46 @@ _NEG = re.compile(
 
 def load_probe(path):
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        return validate_probe(json.load(f))
+
+
+def _nonempty_str(v):
+    return isinstance(v, str) and bool(v.strip())
+
+
+def validate_probe(probe):
+    """Shape-check the probe at load time, so a typo fails before retain writes into
+    the store rather than as a KeyError or re.error halfway through the run."""
+    if not isinstance(probe, dict):
+        raise ValueError("probe must be a JSON object")
+    corpus = probe.get("corpus")
+    if not isinstance(corpus, list) or not corpus:
+        raise ValueError("probe 'corpus' must be a non-empty list")
+    for n, d in enumerate(corpus, 1):
+        if not isinstance(d, dict) or not _nonempty_str(d.get("content")):
+            raise ValueError(f"probe corpus item {n}: missing or empty 'content'")
+    checks = probe.get("checks")
+    if not isinstance(checks, list) or not checks:
+        raise ValueError("probe 'checks' must be a non-empty list")
+    for n, c in enumerate(checks, 1):
+        if not isinstance(c, dict) or not _nonempty_str(c.get("query")):
+            raise ValueError(f"probe check {n}: missing or empty 'query'")
+        for key in ("forbidden", "expected"):
+            pats = c.get(key, [])
+            if not isinstance(pats, list) or not all(isinstance(p, str) for p in pats):
+                raise ValueError(f"probe check {n}: {key!r} must be a list of regex strings")
+            for p in pats:
+                try:
+                    re.compile(p)
+                except re.error as e:
+                    raise ValueError(f"probe check {n}: bad {key} regex {p!r}: {e}") from None
+    corrections = probe.get("corrections", [])
+    if not isinstance(corrections, list) or not all(isinstance(x, str) for x in corrections):
+        raise ValueError("probe 'corrections' must be a list of strings")
+    wait = probe.get("consolidate_wait", 2)
+    if isinstance(wait, bool) or not isinstance(wait, (int, float)) or wait < 0:
+        raise ValueError("probe 'consolidate_wait' must be a non-negative number of seconds")
+    return probe
 
 
 def _check(runner, checks, phase):

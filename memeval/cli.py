@@ -5,7 +5,7 @@ from . import __version__
 from .adapters import REGISTRY
 from .adversarial import load_probe, run_adversarial
 from .events import SCHEMA_VERSION, RunLog, file_sha256, read_events, redact, run_path
-from .rank import load_jsonl, run_rank
+from .rank import load_corpus, load_gold, run_rank
 from .render.text import format_ab, format_adversarial, format_summary
 from .runner import Runner
 
@@ -46,8 +46,8 @@ def _start_run(args, adapter, kind, files):
 
 
 def _rank_one(args, name, kind):
-    corpus = _load_input(args.corpus, load_jsonl, "corpus")
-    gold = _load_input(args.gold, load_jsonl, "gold")
+    corpus = _load_input(args.corpus, load_corpus, "corpus")
+    gold = _load_input(args.gold, load_gold, "gold")
     adapter = build_adapter(name)
     path, log, runner = _start_run(args, adapter, kind,
                                    {"corpus": args.corpus, "gold": args.gold})
@@ -116,7 +116,7 @@ def cmd_runs(args):
 
 def cmd_adapters(args):
     for name, cls in sorted(REGISTRY.items()):
-        doc = (cls.__doc__ or "").strip().splitlines()[0]
+        doc = next(iter((cls.__doc__ or "").strip().splitlines()), "")
         print(f"{name:>14}  {cls.status:>8}  {doc}")
 
 
@@ -197,7 +197,10 @@ def cmd_replay(args):
         from .render.tui import ReplayApp
     except ImportError:
         sys.exit("replay needs textual — pip install 'memeval[tui]'")
-    evs = read_events(args.run)
+    try:
+        evs = read_events(args.run)
+    except OSError as e:
+        sys.exit(f"cannot read run log {args.run}: {e}")
     if not evs:
         sys.exit(f"empty run log: {args.run}")
     ReplayApp(evs).run()
@@ -208,6 +211,8 @@ def cmd_chart(args):
         from .render.charts import render_ab_chart, render_chart
     except ImportError:
         sys.exit("chart needs matplotlib — pip install 'memeval[charts]'")
+    if args.ab and args.run:
+        sys.exit("pass one run file, or --ab RUN_A RUN_B — not both")
     try:
         if args.ab:
             out = render_ab_chart(args.ab[0], args.ab[1], out=args.out, png=args.png)
@@ -217,6 +222,8 @@ def cmd_chart(args):
             sys.exit("pass one run file, or --ab RUN_A RUN_B")
     except ValueError as e:
         sys.exit(str(e))
+    except OSError as e:
+        sys.exit(f"chart failed: {e}")
     print(f"wrote {out}")
 
 

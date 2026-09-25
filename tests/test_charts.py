@@ -112,3 +112,15 @@ def test_chart_all_errors_still_renders(tmp_path, monkeypatch):
     from memeval.render.charts import render_chart
     render_chart(str(next(runs.glob("*.jsonl"))), out=str(tmp_path / "e.svg"))
     assert "<svg" in (tmp_path / "e.svg").read_text()
+
+
+def test_chart_missing_file_exits_cleanly(tmp_path):
+    with pytest.raises(SystemExit) as ex:
+        cli.main(["chart", str(tmp_path / "nope.jsonl")])
+    assert "chart failed" in str(ex.value) and "nope.jsonl" in str(ex.value)
+
+
+def test_chart_rejects_run_and_ab_together(run_log):
+    with pytest.raises(SystemExit) as ex:
+        cli.main(["chart", str(run_log), "--ab", str(run_log), str(run_log)])
+    assert "not both" in str(ex.value)
